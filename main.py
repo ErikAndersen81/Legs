@@ -1,5 +1,6 @@
 from kivy.app import App
 from kivy.uix.widget import Widget
+from kivy.uix.button import Button
 from kivy.uix.slider import Slider
 from kivy.uix.boxlayout import BoxLayout
 from kivy.vector import Vector
@@ -11,7 +12,16 @@ from kivy.properties import NumericProperty
 WIDTH=Window.width
 HEIGHT=Window.height
 
-class VectorApp(App):
+class LeftButton(Button):
+    pass
+class RightButton(Button):
+    pass
+class StrideSlider(Slider):
+    pass
+class PaceSlider(Slider):
+    pass
+
+class LegsApp(App):
     def build(self):
         return MainWindow()
 
@@ -20,15 +30,25 @@ class MainWindow(Widget):
         super(MainWindow, self).__init__(**kwargs)
         self.height = HEIGHT
         self.width = WIDTH
-        self.slider_box = BoxLayout(width = WIDTH, height = HEIGHT * 0.2, top=self.top)
-        self.stride_slider = Slider(min=1, max=50,value=20)
+        self.legs=Legs()
+        self.slider_box = BoxLayout(width = WIDTH, height = HEIGHT * 0.2, top=HEIGHT)
+        self.btn_box = BoxLayout(width = WIDTH, height = HEIGHT * 0.2, top=HEIGHT * 0.8)
+        self.stride_slider = StrideSlider(min=1, max=50,value=20)
         self.stride_slider.bind(value=self.set_stride)
         self.slider_box.add_widget(self.stride_slider)
-        self.speed_slider = Slider(min=1, max=100, value=20)
+        self.speed_slider = PaceSlider(min=1, max=100, value=20)
         self.speed_slider.bind(value = self.set_speed)
         self.slider_box.add_widget(self.speed_slider)
-        self.legs=Legs()
+        self.left_btn = LeftButton()
+        self.right_btn = RightButton ()
+        self.left_btn.bind(on_press = self.legs.go_left)
+        self.right_btn.bind(on_press = self.legs.go_right)
+        self.left_btn.bind(on_release = self.legs.stop_walking)
+        self.right_btn.bind(on_release = self.legs.stop_walking)
+        self.btn_box.add_widget(self.left_btn)
+        self.btn_box.add_widget(self.right_btn)
         self.add_widget(self.slider_box)
+        self.add_widget(self.btn_box)
         self.add_widget(self.legs)
 
     def set_stride(self,instance, value):
@@ -48,21 +68,19 @@ class Legs(Widget):
         self.add_widget(self.left_leg)
         self.going_right = True
         
-    def on_touch_down(self,touch):
-        if touch.x < WIDTH*0.5:
-            self.going_right = False
-        else:
-            self.going_right = True                   
+    def go_left(self, instance):
+        self.going_right = False
         self.start_walking()
         
-    def on_touch_up(self, touch):
-        self.stop_walking()
+    def go_right(self, instance):
+        self.going_right = True                   
+        self.start_walking()
     
     def start_walking(self):
-        Clock.schedule_interval(self.left_leg.walk, 0.1 / self.speed)
-        Clock.schedule_interval(self.right_leg.walk, 0.1 / self.speed)
+        Clock.schedule_interval(self.left_leg.walk, 0.1 / int(self.speed))
+        Clock.schedule_interval(self.right_leg.walk, 0.1 / int(self.speed))
 
-    def stop_walking(self):
+    def stop_walking(self, instance):
         Clock.unschedule(self.left_leg.walk)
         Clock.unschedule(self.right_leg.walk)
         self.left_leg.stance()
@@ -100,8 +118,9 @@ class Leg(Widget):
     def stance(self, *args):
         self.knee_x, self.knee_y = (400,200)
         self.foot_x, self.foot_y = (400,100)
-        # The right leg is straight following a line 10 degrees clockwise from the y-axis,
-        # When in the default stance. The left leg is in a -10 degrees position.
+        # A leg consists of two vectors in continuation of each other, each with a length of 100 px.
+        # When stance is called the right leg is set to follow a straight line 10 degrees clockwise from the y-axis,
+        # and the left leg is mirrored at the y-axis.
         if self.right:
             self.x1,self.y1 = Vector(0,100).rotate(10)
         else:
@@ -177,5 +196,5 @@ class Leg(Widget):
 
             
 if __name__=="__main__":
-    VectorApp().run()
+    LegsApp().run()
     
